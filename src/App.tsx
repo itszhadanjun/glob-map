@@ -237,7 +237,7 @@ function App() {
                 type: 'line',
                 source: 'route',
                 filter: ['all', ['==', ['get', 'active'], true], ['==', ['get', 'kind'], 'walk']],
-                layout: { 'line-join': 'butt', 'line-cap': 'butt' },
+                layout: { 'line-join': 'round', 'line-cap': 'butt' },
                 paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-dasharray': [1, 1.5] },
             })
 
