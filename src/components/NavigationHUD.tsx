@@ -51,6 +51,15 @@ export default function NavigationHUD({
     const { t } = useTranslation()
     const arrived = !!journey?.arrived
 
+    // Helper to resolve string or translation object safely
+    const resolveText = (val: any): string => {
+        if (!val) return ''
+        if (typeof val === 'object' && val.key) {
+            return t(val.key, val.params)
+        }
+        return String(val)
+    }
+
     return (
         <div style={{ fontFamily: 'system-ui, sans-serif' }}>
             <style>{`@keyframes pop{0%{transform:translateY(30px) scale(.9);opacity:0}100%{transform:none;opacity:1}}`}</style>
@@ -66,7 +75,9 @@ export default function NavigationHUD({
                                 </div>
                                 <div style={{ minWidth: 0 }}>
                                     <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1 }}>{fmtDist(journey.nextDistM)}</div>
-                                    <div style={{ fontSize: 17, opacity: 0.95, marginTop: 2 }}>{journey.next?.text ?? `Continue to ${destinationName}`}</div>
+                                    <div style={{ fontSize: 17, opacity: 0.95, marginTop: 2 }}>
+                                        {journey.next?.text ? resolveText(journey.next.text) : `Continue to ${destinationName}`}
+                                    </div>
                                 </div>
                             </>
                         ) : (
