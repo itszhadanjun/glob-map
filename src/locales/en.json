@@ -1,0 +1,116 @@
+{
+  "common": {
+    "myLocation": "My location",
+    "searchPlaceholder": "Search destination...",
+    "swap": "Swap origin and destination",
+    "close": "Close",
+    "loading": "Loading..."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language"
+  },
+  "searchbox": {
+    "startingPoint": "Starting point",
+    "whereTo": "Where to?",
+    "findLocation": "Finding your location...",
+    "useMyLocation": "Use my location",
+    "toggleWeather": "Toggle Weather Forecast",
+    "weatherTitle": "Today's Weather",
+    "morning": "Morning",
+    "afternoon": "Afternoon",
+    "night": "Night",
+    "temp": "Temp",
+    "noWeather": "No weather data found for today.",
+    "weatherError": "Could not fetch weather data. Make sure the Node server is running."
+  },
+  "modes": {
+    "drive": "Drive",
+    "ride": "Ride",
+    "transit": "Transit",
+    "walk": "Walk"
+  },
+  "routePanel": {
+    "routeTo": "Route to",
+    "expand": "Expand",
+    "minimise": "Minimise",
+    "close": "Close",
+    "findingRoutes": "Finding routes...",
+    "noRoute": "No route found.",
+    "setStart": "Set a starting point to see routes.",
+    "checkingSkybridges": "Checking for skybridges...",
+    "from": "from",
+    "startJourney": "Start journey",
+    "demo": "Demo",
+    "estimatedFare": "Estimated fare",
+    "stepDistance": "{distance}"
+  },
+  "routes": {
+    "alternative": "Alternative",
+    "viaSkybridgeShortest": "Via skybridge · Shortest",
+    "viaSkybridge": "Via skybridge",
+    "shortestWalk": "Shortest walk",
+    "fastestShortest": "Fastest & shortest",
+    "fastest": "Fastest",
+    "shortest": "Shortest",
+    "usesSkybridges": "Uses {count} skybridge{plural}",
+    "noStreetCrossings": ", no street-level crossings",
+    "streetCrossingsCount": ", {count} street-level crossing{plural}",
+    "streetCrossingsMap": "{count} street-level crossing{plural} (from map data)",
+    "timetableEstimate": "Estimate, not a live timetable",
+    "noTransit": "No public transport within walking distance. Try walking or driving."
+  },
+  "steps": {
+    "crossSkybridge": "Cross the road on the skybridge",
+    "walkTo": "Walk to {name}",
+    "changeAt": "Change at {name}",
+    "takeLine": "Take {line} from {a} to {b} ({stops} stop{plural})",
+    "walkDestination": "Walk to your destination"
+  },
+  "fares": {
+    "checkApp": "Check app",
+    "surgeEstimate": "Estimate, surge pricing can be higher",
+    "rapidOnDemand": "Rapid On-Demand ({name})",
+    "rapidOnDemandNote": "Book in the MyRapid app, the price is shown there",
+    "publicTransport": "Public transport",
+    "noFareData": "No fare data for {operators}",
+    "doesNotInclude": "Does not include {operators}",
+    "rideEstimate": "Estimate, each ride is priced separately"
+  },
+  "navigation": {
+    "starting": "Starting navigation",
+    "rerouting": "Rerouting",
+    "arrived": "You have arrived at {name}",
+    "exit": "Exit Navigation",
+    "then": "Then",
+    "leftRoute": "You left the route. Finding a new one...",
+    "gettingPosition": "Getting your position...",
+    "unmute": "Unmute voice",
+    "mute": "Mute voice",
+    "recenter": "Re-centre",
+    "endJourney": "End journey",
+    "youHaveArrived": "You have arrived",
+    "done": "Done",
+    "gpsNotAvailable": "Location is not available in this browser",
+    "gpsDenied": "Location permission denied",
+    "gpsWaiting": "Waiting for GPS signal...",
+    "meters": "{val} meters",
+    "kilometers": "{val} kilometers"
+  },
+  "lineCard": {
+    "interchange": "Interchange · {count} lines",
+    "changeHere": "Change here to",
+    "nearbyConnections": "Nearby connections",
+    "walkMin": "{min} min walk",
+    "hideInterchanges": "Hide interchanges ▴",
+    "showInterchanges": "Show interchanges ▾",
+    "noInterchanges": "No interchanges found on this line.",
+    "nextDepartures": "Next departures",
+    "estimated": "Estimated",
+    "scheduled": "Scheduled",
+    "estimatedTooltip": "Calculated from first/last train and how often trains run, not an official timetable",
+    "noTimetable": "No timetable source for this operator yet.",
+    "errorTimetable": "Timetable unavailable.",
+    "noMoreDepartures": "No more scheduled departures today."
+  }
+}

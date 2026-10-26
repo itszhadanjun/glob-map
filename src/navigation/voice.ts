@@ -8,6 +8,11 @@ export function stopSpeaking() {
     if ('speechSynthesis' in window) window.speechSynthesis.cancel()
 }
 
-export function spokenDistance(m: number) {
-    return m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} meters` : `${(m / 1000).toFixed(1)} kilometers`
+export function spokenDistance(m: number, t?: (key: string, params?: any) => string) {
+    if (m < 1000) {
+        const val = Math.max(10, Math.round(m / 10) * 10)
+        return t ? t('navigation.meters', { val }) : `${val} meters`
+    }
+    const val = (m / 1000).toFixed(1)
+    return t ? t('navigation.kilometers', { val }) : `${val} kilometers`
 }

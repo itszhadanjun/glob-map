@@ -79,12 +79,12 @@ export function snapToPath(p: PathIndex, pos: LngLat, minAlong = -Infinity, maxA
     return best
 }
 
-function kindOf(text: string): Maneuver {
-    const t = text.toLowerCase()
-    if (/arrived|destination is|you will arrive/.test(t)) return 'arrive'
+function kindOf(text: string | { key: string; params?: Record<string, any> }): Maneuver {
+    const t = typeof text === 'object' ? text.key : text.toLowerCase()
+    if (/arrived|destination is|you will arrive|steps\.walkDestination/.test(t)) return 'arrive'
     if (/u-turn/.test(t)) return 'uturn'
     if (/roundabout|rotary/.test(t)) return 'roundabout'
-    if (/^(take|change)/.test(t)) return 'transit'
+    if (/^(take|change)|steps\.(takeLine|changeAt)/.test(t)) return 'transit'
     if (/\bleft\b/.test(t)) return 'left'
     if (/\bright\b/.test(t)) return 'right'
     return 'straight'

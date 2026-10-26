@@ -1,5 +1,6 @@
 import type { Journey } from '../navigation/useJourney.ts'
 import type { Maneuver } from '../navigation/guidance.ts'
+import { useTranslation } from '../i18n/TranslationContext'
 
 const GREEN = '#0b5f5a'
 
@@ -47,6 +48,7 @@ export default function NavigationHUD({
     onRecenter: () => void
     onExit: () => void
 }) {
+    const { t } = useTranslation()
     const arrived = !!journey?.arrived
 
     return (
@@ -68,19 +70,19 @@ export default function NavigationHUD({
                                 </div>
                             </>
                         ) : (
-                            <div style={{ fontSize: 16 }}>{gpsError || 'Getting your position...'}</div>
+                            <div style={{ fontSize: 16 }}>{gpsError || t('navigation.gettingPosition')}</div>
                         )}
                     </div>
 
                     {journey?.then && (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: GREEN, color: '#fff', padding: '6px 14px', borderRadius: '0 0 14px 14px', marginLeft: 8, fontSize: 15 }}>
-                            Then <Icon kind={journey.then.kind} size={22} />
+                            {t('navigation.then')} <Icon kind={journey.then.kind} size={22} />
                         </div>
                     )}
 
                     {journey?.offRoute && (
                         <div style={{ marginTop: 8, background: '#f5b800', color: '#222', padding: '8px 14px', borderRadius: 10, fontSize: 14, fontWeight: 600 }}>
-                            You left the route. Finding a new one...
+                            {t('navigation.leftRoute')}
                         </div>
                     )}
                     {journey && gpsError && (
@@ -92,8 +94,8 @@ export default function NavigationHUD({
             {/* side buttons */}
             {!arrived && (
                 <div style={{ position: 'fixed', right: 12, bottom: 150, zIndex: 4, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    <button style={roundBtn} onClick={onToggleMute} aria-label={muted ? 'Unmute voice' : 'Mute voice'}>{muted ? '🔇' : '🔊'}</button>
-                    {!following && <button style={{ ...roundBtn, background: '#2b7de9' }} onClick={onRecenter} aria-label="Re-centre">➤</button>}
+                    <button style={roundBtn} onClick={onToggleMute} aria-label={muted ? t('navigation.unmute') : t('navigation.mute')}>{muted ? '🔇' : '🔊'}</button>
+                    {!following && <button style={{ ...roundBtn, background: '#2b7de9' }} onClick={onRecenter} aria-label={t('navigation.recenter')}>➤</button>}
                 </div>
             )}
 
@@ -111,7 +113,7 @@ export default function NavigationHUD({
             {!arrived && (
                 <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 4, background: '#000', color: '#fff', borderRadius: '22px 22px 0 0', padding: '16px 20px 22px' }}>
                     <div style={{ maxWidth: 520, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 16 }}>
-                        <button onClick={onExit} aria-label="End journey" style={{ ...roundBtn, background: 'transparent', border: '1.5px solid #888', fontSize: 22 }}>✕</button>
+                        <button onClick={onExit} aria-label={t('navigation.endJourney')} style={{ ...roundBtn, background: 'transparent', border: '1.5px solid #888', fontSize: 22 }}>✕</button>
                         <div style={{ flex: 1, textAlign: 'center' }}>
                             <div style={{ fontSize: 30, fontWeight: 700, color: '#58d68d' }}>{journey ? fmtMin(journey.remainingS) : '--'}</div>
                             <div style={{ fontSize: 15, color: '#bbb' }}>
@@ -128,7 +130,7 @@ export default function NavigationHUD({
             {arrived && (
                 <div style={{ position: 'fixed', left: 12, right: 12, bottom: 24, maxWidth: 420, margin: '0 auto', zIndex: 5, background: '#fff', color: '#222', borderRadius: 20, padding: 24, textAlign: 'center', boxShadow: '0 8px 30px rgba(0,0,0,.35)', animation: 'pop .4s ease-out' }}>
                     <div style={{ fontSize: 48 }}>🎉</div>
-                    <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>You have arrived</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, marginTop: 4 }}>{t('navigation.youHaveArrived')}</div>
                     <div style={{ fontSize: 16, color: '#555', marginTop: 4 }}>{destinationName}</div>
                     {summary && (
                         <div style={{ marginTop: 12, fontSize: 14, color: '#777' }}>
@@ -136,7 +138,7 @@ export default function NavigationHUD({
                         </div>
                     )}
                     <button onClick={onExit} style={{ marginTop: 18, width: '100%', padding: '12px 0', border: 0, borderRadius: 12, background: '#2b7de9', color: '#fff', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>
-                        Done
+                        {t('navigation.done')}
                     </button>
                 </div>
             )}

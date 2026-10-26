@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { LngLat, Route } from './routing'
 import { bearing, buildPath, buildSteps, distM, pointAt, snapToPath } from './guidance'
 import type { GuideStep } from './guidance'
+import { useTranslation } from '../i18n/TranslationContext'
 
 export interface Journey {
     fix: { lngLat: LngLat; heading: number | null; speedKmh: number }
@@ -25,6 +26,7 @@ export function useJourney({ route, active, simulate, onOffRoute }: {
     simulate: boolean
     onOffRoute: (pos: LngLat) => void
 }) {
+    const { t } = useTranslation()
     const path = useMemo(() => (route ? buildPath(route) : null), [route])
     const steps = useMemo(() => (route && path ? buildSteps(route, path) : []), [route, path])
     const [journey, setJourney] = useState<Journey | null>(null)
@@ -48,12 +50,11 @@ export function useJourney({ route, active, simulate, onOffRoute }: {
             if (arrived) return
 
             let s = snapToPath(path, raw.lngLat, along - 100, along + 1500)
-            if (s.offM > 60) s = snapToPath(path, raw.lngLat) // lost: search the whole route
+            if (s.offM > 60) s = snapToPath(path, raw.lngLat)
             const off = s.offM > 50
             offCount = off ? offCount + 1 : 0
-            if (!off) along = Math.max(along, s.along) // never go backwards
+            if (!off) along = Math.max(along, s.along)
 
-            // heading: GPS when moving, else the direction we moved, else the road direction
             let heading: number | null
             if (raw.heading !== null && Number.isFinite(raw.heading) && raw.speedMs > 0.8) heading = raw.heading
             else if (last && distM(last, raw.lngLat) > 3) heading = bearing(last, raw.lngLat)
@@ -91,7 +92,6 @@ export function useJourney({ route, active, simulate, onOffRoute }: {
             }
         }
 
-        // demo: move along the route (faster than real life)
         if (simulate) {
             let d = 0
             const v = route.mode === 'walk' ? 8 : 18
@@ -107,7 +107,7 @@ export function useJourney({ route, active, simulate, onOffRoute }: {
         }
 
         if (!navigator.geolocation) {
-            setGpsError('Location is not available in this browser')
+            setGpsError(t('navigation.gpsNotAvailable'))
             return
         }
         const id = navigator.geolocation.watchPosition(
@@ -115,13 +115,12 @@ export function useJourney({ route, active, simulate, onOffRoute }: {
                 setGpsError('')
                 handle({ lngLat: [p.coords.longitude, p.coords.latitude], heading: p.coords.heading, speedMs: p.coords.speed ?? 0 })
             },
-            (e) => setGpsError(e.code === 1 ? 'Location permission denied' : 'Waiting for GPS signal...'),
+            (e) => setGpsError(e.code === 1 ? t('navigation.gpsDenied') : t('navigation.gpsWaiting')),
             { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
         )
         return () => navigator.geolocation.clearWatch(id)
-    }, [active, route, path, steps, simulate])
+    }, [active, route, path, steps, simulate, t])
 
-    // keep the screen on while navigating
     useEffect(() => {
         if (!active || !('wakeLock' in navigator)) return
         let lock: WakeLockSentinel | undefined

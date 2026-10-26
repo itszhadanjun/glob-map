@@ -1,0 +1,116 @@
+{
+  "common": {
+    "myLocation": "我的位置",
+    "searchPlaceholder": "搜尋目的地...",
+    "swap": "對調起點與終點",
+    "close": "關閉",
+    "loading": "載入中..."
+  },
+  "settings": {
+    "title": "設定",
+    "language": "語言"
+  },
+  "searchbox": {
+    "startingPoint": "起點",
+    "whereTo": "要去哪裡？",
+    "findLocation": "正在尋找您的位置...",
+    "useMyLocation": "使用我的位置",
+    "toggleWeather": "切換天氣預報",
+    "weatherTitle": "今日天氣",
+    "morning": "上午",
+    "afternoon": "下午",
+    "night": "晚上",
+    "temp": "氣溫",
+    "noWeather": "找不到今日的天氣資料。",
+    "weatherError": "無法取得天氣資料。請確保 Node 伺服器正在執行。"
+  },
+  "modes": {
+    "drive": "開車",
+    "ride": "乘車",
+    "transit": "大眾運輸",
+    "walk": "步行"
+  },
+  "routePanel": {
+    "routeTo": "前往路線",
+    "expand": "展開",
+    "minimise": "縮小",
+    "close": "關閉",
+    "findingRoutes": "正在尋找路線...",
+    "noRoute": "找不到路線。",
+    "setStart": "請設定起點以查看路線。",
+    "checkingSkybridges": "正在檢查空橋...",
+    "from": "起價",
+    "startJourney": "開始行程",
+    "demo": "展示",
+    "estimatedFare": "預估車資",
+    "stepDistance": "{distance}"
+  },
+  "routes": {
+    "alternative": "替代路線",
+    "viaSkybridgeShortest": "經空橋 · 最近",
+    "viaSkybridge": "經空橋",
+    "shortestWalk": "最短步行",
+    "fastestShortest": "最快且最近",
+    "fastest": "最快",
+    "shortest": "最近",
+    "usesSkybridges": "使用 {count} 座空橋",
+    "noStreetCrossings": "，無平面道路穿越",
+    "streetCrossingsCount": "，{count} 處平面道路穿越",
+    "streetCrossingsMap": "{count} 處平面道路穿越（來自地圖資料）",
+    "timetableEstimate": "預估，非即時時刻表",
+    "noTransit": "步行範圍內無大眾運輸。請嘗試步行或開車。"
+  },
+  "steps": {
+    "crossSkybridge": "走空橋過馬路",
+    "walkTo": "步行至 {name}",
+    "changeAt": "在 {name} 轉乘",
+    "takeLine": "搭乘 {line} 從 {a} 到 {b}（共 {stops} 站）",
+    "walkDestination": "步行至目的地"
+  },
+  "fares": {
+    "checkApp": "請查看應用程式",
+    "surgeEstimate": "估算值，尖峰時段價格可能更高",
+    "rapidOnDemand": "Rapid On-Demand ({name})",
+    "rapidOnDemandNote": "請在 MyRapid App 中預訂，價格將顯示於其中",
+    "publicTransport": "大眾運輸",
+    "noFareData": "無 {operators} 的票價資料",
+    "doesNotInclude": "不包含 {operators}",
+    "rideEstimate": "估算值，每趟行程獨立計費"
+  },
+  "navigation": {
+    "starting": "開始導航",
+    "rerouting": "重新規劃路線",
+    "arrived": "您已抵達 {name}",
+    "exit": "結束導航",
+    "then": "然後",
+    "leftRoute": "您已偏離路線。正在重新規劃...",
+    "gettingPosition": "正在取得您的位置...",
+    "unmute": "取消語音靜音",
+    "mute": "語音靜音",
+    "recenter": "重新置中",
+    "endJourney": "結束行程",
+    "youHaveArrived": "您已抵達",
+    "done": "完成",
+    "gpsNotAvailable": "此瀏覽器不支援定位功能",
+    "gpsDenied": "定位權限遭拒",
+    "gpsWaiting": "正在等待 GPS 訊號...",
+    "meters": "{val} 公尺",
+    "kilometers": "{val} 公里"
+  },
+  "lineCard": {
+    "interchange": "轉乘站 · {count} 條路線",
+    "changeHere": "在此轉乘至",
+    "nearbyConnections": "鄰近轉乘",
+    "walkMin": "步行 {min} 分鐘",
+    "hideInterchanges": "隱藏轉乘站 ▴",
+    "showInterchanges": "顯示轉乘站 ▾",
+    "noInterchanges": "此路線上找不到轉乘站。",
+    "nextDepartures": "即將發車",
+    "estimated": "預估",
+    "scheduled": "時刻表",
+    "estimatedTooltip": "根據首末班車及發車頻率計算，非官方時刻表",
+    "noTimetable": "此營運商尚無時刻表來源。",
+    "errorTimetable": "時刻表無法使用。",
+    "noMoreDepartures": "今日已無排定班次。"
+  }
+}

@@ -11,4 +11,5 @@ export const OPERATOR_LOGOS: Record<string, string> = {
     'New Taipei Metro': '/logos/new-taipei-metro.svg',
     'Taoyuan Metro': '/logos/taoyuan-metro.svg',
     'Taiwan Railway': '/logos/tra.svg',
+    'Taiwan HSR': '/logos/thsr.svg',
 }

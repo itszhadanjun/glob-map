@@ -21,13 +21,15 @@ import { fetchRoutes } from './navigation/routing'
 import type { LngLat, Mode, Place, Route } from './navigation/routing'
 import { useJourney } from './navigation/useJourney'
 import { speak, stopSpeaking, spokenDistance } from './navigation/voice'
+import SettingsModal from './components/SettingsModal'
+import { useTranslation } from './i18n/TranslationContext'
+import { TranslationProvider } from './i18n/TranslationContext'
 
 maplibregl.setWorkerUrl(workerUrl)
 
 const ARROW_SVG =
     '<svg viewBox="0 0 40 40" width="44" height="44"><circle cx="20" cy="20" r="18" fill="#2b7de9" fill-opacity=".18"/><path d="M20 6 L30 31 L20 26 L10 31 Z" fill="#2b7de9" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/></svg>'
 
-// a station marker: one pill with an icon per rail type, outlined in the line color(s)
 function createStationElement(st: MergedStation) {
     const colors = st.members.map((m) => m.line.color)
     const border =
@@ -37,9 +39,8 @@ function createStationElement(st: MergedStation) {
 
     const kinds = iconKinds(st.members.map((m) => m.line.type))
 
-    // OUTER element: MapLibre positions it, so never set position/transform on it
     const outer = document.createElement('div')
-    outer.style.cursor = 'pointer'
+    outer.style.cssText = 'cursor: pointer; pointer-events: auto; z-index: 10;'
 
     const pill = document.createElement('div')
     pill.style.cssText = `display:flex;align-items:center;justify-content:center;gap:3px;height:26px;min-width:26px;padding:0 ${kinds.length > 1 ? 6 : 0}px;box-sizing:border-box;border-radius:13px;border:3px solid transparent;background:linear-gradient(#fff,#fff) padding-box, ${border} border-box;color:#333;box-shadow:0 1px 4px rgba(0,0,0,.35)`
@@ -59,13 +60,14 @@ function createStationElement(st: MergedStation) {
 function App() {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const mapRef = useRef<maplibregl.Map | null>(null)
+    const { t } = useTranslation()
 
+    const [settingsOpen, setSettingsOpen] = useState(false)
     const isMobile = useIsMobile()
     const isMobileRef = useRef(isMobile)
     isMobileRef.current = isMobile
     const [panelCollapsed, setPanelCollapsed] = useState(false)
 
-    // route planning state
     const [origin, setOrigin] = useState<Place | null>(null)
     const [destination, setDestination] = useState<Place | null>(null)
     const [mode, setMode] = useState<Mode>('drive')
@@ -78,7 +80,6 @@ function App() {
     const fitNext = useRef(false)
     const endMarkers = useRef<maplibregl.Marker[]>([])
 
-    // journey state
     const [navigating, setNavigating] = useState(false)
     const [simulate, setSimulate] = useState(false)
     const [muted, setMuted] = useState(false)
@@ -98,7 +99,7 @@ function App() {
             const rs = await fetchRoutes(mode, pos, destination.coordinates)
             setRoutes([rs[0]])
             setSelected(0)
-            if (!muted) speak('Rerouting')
+            if (!muted) speak(t('navigation.rerouting'))
         } catch (e) {
             console.warn('reroute failed', e)
         }
@@ -116,7 +117,7 @@ function App() {
         setLocating(true)
         navigator.geolocation.getCurrentPosition(
             (p) => {
-                setOrigin({ name: 'My location', coordinates: [p.coords.longitude, p.coords.latitude] })
+                setOrigin({ name: t('common.myLocation'), coordinates: [p.coords.longitude, p.coords.latitude] })
                 setLocating(false)
             },
             () => setLocating(false),
@@ -138,7 +139,7 @@ function App() {
         setFollowing(true)
         setNavigating(true)
         mapRef.current?.easeTo({ pitch: 55, zoom: activeRoute.mode === 'walk' ? 18 : 17, duration: 800 })
-        if (!muted) speak('Starting navigation')
+        if (!muted) speak(t('navigation.starting'))
     }
 
     const endJourney = () => {
@@ -156,10 +157,8 @@ function App() {
         }
     }
 
-    // the start point is automatic by default
     useEffect(() => { useMyLocation() }, [])
 
-    // ---------- map ----------
     useEffect(() => {
         if (mapRef.current || !mapContainer.current) return
 
@@ -173,7 +172,6 @@ function App() {
             zoom: 11,
         })
 
-        // dragging the map: stop following during a journey, minimise the route sheet on phones
         map.on('dragstart', () => {
             if (navigatingRef.current) setFollowing(false)
             else if (isMobileRef.current) setPanelCollapsed(true)
@@ -183,7 +181,13 @@ function App() {
             popup?.remove()
             const container = document.createElement('div')
             const root = createRoot(container)
-            root.render(content)
+
+            // Wrap content in TranslationProvider so hooks work inside MapLibre popups
+            root.render(
+                <TranslationProvider>
+                    {content}
+                </TranslationProvider>
+            )
 
             const p = new maplibregl.Popup({ maxWidth: 'none', className: 'rail-popup', offset: 18 })
                 .setLngLat(lngLat)
@@ -194,7 +198,6 @@ function App() {
         }
 
         map.on('load', () => {
-            // 0. make footpaths readable on the base map
             for (const layer of map.getStyle().layers) {
                 if (layer.type === 'line' && /path|pedestrian|footway/i.test(layer.id)) {
                     map.setPaintProperty(layer.id, 'line-color', '#b08d6a')
@@ -203,7 +206,6 @@ function App() {
                 }
             }
 
-            // 1. rail lines (visibility is managed by updateVisibility below)
             const lineIds: string[] = []
             for (const line of railLineManager.getAll()) {
                 lineIds.push(line.id)
@@ -215,12 +217,11 @@ function App() {
                     layout: { 'line-join': 'round', 'line-cap': 'round', visibility: 'none' },
                     paint: {
                         'line-color': line.color,
-                        'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 9, 3, 13, 4],
+                        'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2, 9, 4, 13, 7],
                     },
                 })
             }
 
-            // navigation routes, drawn above the rail lines
             map.addSource('route', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
             map.addLayer({
                 id: 'route-alt',
@@ -238,7 +239,6 @@ function App() {
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: { 'line-color': '#fff', 'line-width': 9 },
             })
-            // solid line: driving, train rides and skybridges (anything that isn't a walk)
             map.addLayer({
                 id: 'route-solid',
                 type: 'line',
@@ -256,7 +256,6 @@ function App() {
                 paint: { 'line-color': ['get', 'color'], 'line-width': 6, 'line-dasharray': [1, 1.5] },
             })
 
-            // the part of the route already travelled, drawn in grey on top
             map.addSource('nav-passed', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
             map.addLayer({
                 id: 'nav-passed',
@@ -274,19 +273,23 @@ function App() {
 
             const linesAt = (point: maplibregl.Point) => {
                 const box: [maplibregl.PointLike, maplibregl.PointLike] = [
-                    [point.x - 5, point.y - 5],
-                    [point.x + 5, point.y + 5],
+                    [point.x - 12, point.y - 12],
+                    [point.x + 12, point.y + 12],
                 ]
                 const visible = lineIds.filter((id) => map.getLayoutProperty(id, 'visibility') === 'visible')
                 if (!visible.length) return []
-                const ids = new Set(map.queryRenderedFeatures(box, { layers: visible }).map((f) => f.properties?.id as string))
-                return [...ids].map((id) => railLineManager.getById(id)!).filter(Boolean)
+                const features = map.queryRenderedFeatures(box, { layers: visible })
+                const hitIds = new Set<string>()
+                for (const f of features) {
+                    if (f.layer?.id) hitIds.add(f.layer.id)
+                }
+                return [...hitIds].map((id) => railLineManager.getById(id)!).filter(Boolean)
             }
 
             map.on('click', (e) => {
-                // clicking an alternative route must not also open a line popup
                 if (map.queryRenderedFeatures(e.point, { layers: ['route-alt'] }).length) return
                 const lines = linesAt(e.point)
+                console.log('Map clicked at:', e.lngLat, 'Found lines:', lines)
                 if (!lines.length) return
                 openPopup(
                     e.lngLat,
@@ -301,7 +304,6 @@ function App() {
                 map.getCanvas().style.cursor = onAlt || linesAt(e.point).length ? 'pointer' : ''
             })
 
-            // 2. live trains (Malaysia only)
             map.addSource('vehicles', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
             map.addLayer({
                 id: 'vehicles',
@@ -322,7 +324,6 @@ function App() {
             refresh()
             timer = window.setInterval(refresh, 30_000)
 
-            // 3. stations: snapped to the track, markers created only when close AND in the viewport
             const stations = REGIONS.flatMap((r) => railLineManager.getMergedStations(r.country)).map((st, i) => ({
                 id: i,
                 st: { ...st, coordinates: snapToLines(st.coordinates, st.members.map((m) => m.line)) },
@@ -338,22 +339,21 @@ function App() {
                 const showLines = z >= LINE_ZOOM
                 const showMarkers = z >= MARKER_ZOOM
 
-                // only the lines of the country you are looking at
                 for (const line of railLineManager.getAll()) {
                     const visible = showLines && line.country === country
                     map.setLayoutProperty(line.id, 'visibility', visible ? 'visible' : 'none')
                 }
                 map.setLayoutProperty('vehicles', 'visibility', z >= VEHICLE_ZOOM && country === 'MY' ? 'visible' : 'none')
 
-                // station markers: close up, same country, inside the viewport
                 for (const { id, st } of stations) {
                     const want = showMarkers && st.members[0].line.country === country && b.contains(st.coordinates)
                     const existing = markers.get(id)
 
                     if (want && !existing) {
                         const el = createStationElement(st)
-                        el.onclick = (e) => {
+                        el.addEventListener('click', (e) => {
                             e.stopPropagation()
+                            console.log('Station clicked:', st.name)
                             openPopup(
                                 st.coordinates,
                                 <LineCard
@@ -361,10 +361,10 @@ function App() {
                                     members={st.members}
                                     station={st}
                                     showTimetable
-                                    onJump={(c) => map.flyTo({ center: c, zoom: 17 })}
+                                    onJump={(coords) => map.flyTo({ center: coords, zoom: 17 })}
                                 />,
                             )
-                        }
+                        })
                         markers.set(id, new maplibregl.Marker({ element: el }).setLngLat(st.coordinates).addTo(map))
                     } else if (!want && existing) {
                         existing.remove()
@@ -388,9 +388,6 @@ function App() {
         }
     }, [])
 
-    // ---------- route planning effects ----------
-
-    // fetch routes whenever start, destination or mode changes; early results show immediately
     useEffect(() => {
         if (!origin || !destination) {
             setRoutes([])
@@ -406,7 +403,6 @@ function App() {
         setError('')
 
         fetchRoutes(mode, origin.coordinates, destination.coordinates, ctrl.signal, (rs) => {
-            // an early result: show it now and keep improving in the background
             setRoutes(rs)
             if (first) { setSelected(0); first = false }
             setStatus('idle')
@@ -434,7 +430,6 @@ function App() {
         return () => ctrl.abort()
     }, [origin, destination, mode])
 
-    // start and destination markers
     useEffect(() => {
         const map = mapRef.current
         if (!map) return
@@ -444,7 +439,6 @@ function App() {
         if (destination) endMarkers.current.push(new maplibregl.Marker({ color: '#e5484d' }).setLngLat(destination.coordinates).addTo(map))
     }, [origin, destination])
 
-    // draw all options, the selected one highlighted
     useEffect(() => {
         const src = mapRef.current?.getSource('route') as maplibregl.GeoJSONSource | undefined
         if (!src) return
@@ -460,7 +454,6 @@ function App() {
         })
     }, [routes, selected])
 
-    // zoom to the routes once per search (not when the list improves or you switch options), never during a journey
     useEffect(() => {
         const map = mapRef.current
         if (!map || !routes.length || navigatingRef.current) return
@@ -477,7 +470,6 @@ function App() {
         })
     }, [routes])
 
-    // destination chosen but no start yet
     useEffect(() => {
         const map = mapRef.current
         if (destination && !origin && map) {
@@ -485,22 +477,17 @@ function App() {
         }
     }, [destination])
 
-    // ---------- journey effects ----------
-
-    // hide the zoom controls while navigating (the HUD owns the bottom edge)
     useEffect(() => {
         document.documentElement.classList.toggle('navigating', navigating)
         return () => document.documentElement.classList.remove('navigating')
     }, [navigating])
 
-    // hide alternatives while navigating
     useEffect(() => {
         const map = mapRef.current
         if (!map || !map.getLayer('route-alt')) return
         map.setLayoutProperty('route-alt', 'visibility', navigating ? 'none' : 'visible')
     }, [navigating])
 
-    // grey out the part already travelled
     useEffect(() => {
         const src = mapRef.current?.getSource('nav-passed') as maplibregl.GeoJSONSource | undefined
         if (!src) return
@@ -513,7 +500,6 @@ function App() {
         })
     }, [journey, navigating])
 
-    // position arrow and camera
     useEffect(() => {
         const map = mapRef.current
         if (!map) return
@@ -526,7 +512,7 @@ function App() {
 
         const { lngLat, heading } = journey.fix
         if (!navMarker.current) {
-            const el = document.createElement('div') // never set position/transform on this element
+            const el = document.createElement('div')
             el.innerHTML = ARROW_SVG
             navMarker.current = new maplibregl.Marker({ element: el, rotationAlignment: 'map', pitchAlignment: 'map' })
                 .setLngLat(lngLat)
@@ -546,7 +532,6 @@ function App() {
         }
     }, [journey, navigating, following])
 
-    // voice guidance
     useEffect(() => {
         if (!journey || !navigating || muted || journey.arrived) return
         const n = journey.next
@@ -554,11 +539,10 @@ function App() {
         const limit = activeRoute?.mode === 'walk' ? 40 : 150
         if (journey.nextDistM <= limit && !spoken.current.has(n.idx)) {
             spoken.current.add(n.idx)
-            speak(n.kind === 'arrive' ? n.text : `In ${spokenDistance(journey.nextDistM)}, ${n.text}`)
+            speak(n.kind === 'arrive' ? (typeof n.text === 'object' ? t(n.text.key, n.text.params) : n.text) : `In ${spokenDistance(journey.nextDistM, t)}, ${typeof n.text === 'object' ? t(n.text.key, n.text.params) : n.text}`)
         }
-    }, [journey])
+    }, [journey, navigating, muted, activeRoute?.mode, t])
 
-    // arrival feedback
     useEffect(() => {
         if (!journey?.arrived || !destination || !activeRoute) return
         setSummary({
@@ -566,12 +550,29 @@ function App() {
             elapsedS: simulate ? activeRoute.durationS : (Date.now() - startedAt.current) / 1000,
         })
         navigator.vibrate?.([250, 120, 250])
-        if (!muted) speak(`You have arrived at ${destination.name}`)
-    }, [journey?.arrived])
+        if (!muted) speak(t('navigation.arrived', { name: destination.name }))
+    }, [journey?.arrived, destination, activeRoute, simulate, muted, t])
 
     return (
         <>
             <div ref={mapContainer} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh' }} />
+
+            {!navigating && (
+                <button
+                    onClick={() => setSettingsOpen(true)}
+                    style={{
+                        position: 'fixed', top: '16px', right: '16px', zIndex: 1000,
+                        background: '#fff', border: 'none', borderRadius: '50%', width: '44px', height: '44px',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)', cursor: 'pointer', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', fontSize: '20px'
+                    }}
+                    title={t('settings.title')}
+                >
+                    ⚙️
+                </button>
+            )}
+
+            <SettingsModal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
             {!navigating && (
                 <Searchbox

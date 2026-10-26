@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Mode, Place } from '../navigation/routing'
 import { useIsMobile } from '../hooks/useIsMobile'
+import { useTranslation } from '../i18n/TranslationContext'
 
 interface Result extends Place {
     detail: string
@@ -54,6 +55,8 @@ function PlaceInput({
     const valueRef = useRef(value)
     valueRef.current = value
 
+    const { lang, t } = useTranslation()
+
     useEffect(() => { setText(value?.name ?? '') }, [value])
 
     useEffect(() => {
@@ -67,7 +70,11 @@ function PlaceInput({
             setLoading(true); setFailed(false)
             try {
                 const bias = getBias?.()
-                const url = `${ENDPOINT}?q=${encodeURIComponent(q)}&limit=6&lang=en${bias ? `&lon=${bias[0]}&lat=${bias[1]}` : ''}`
+                const code = lang.split('_')[0].toLowerCase()
+                const apiLang = code === 'en' ? 'en' : 'default'
+
+                const url = `${ENDPOINT}?q=${encodeURIComponent(q)}&limit=6&lang=${apiLang}${bias ? `&lon=${bias[0]}&lat=${bias[1]}` : ''}`
+
                 const res = await fetch(url, { signal: ctrl.signal })
                 if (!res.ok) throw new Error(`HTTP ${res.status}`)
                 const data = await res.json()
@@ -81,11 +88,14 @@ function PlaceInput({
             }
         }, 350)
         return () => { clearTimeout(timer); ctrl.abort() }
-    }, [text])
+    }, [text, lang, getBias])
 
+    // Close suggestion box when clicking outside
     useEffect(() => {
         const h = (e: MouseEvent) => {
-            if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
+            if (boxRef.current && !boxRef.current.contains(e.target as Node)) {
+                setOpen(false)
+            }
         }
         document.addEventListener('mousedown', h)
         return () => document.removeEventListener('mousedown', h)
@@ -104,7 +114,8 @@ function PlaceInput({
         else if (e.key === 'Escape') setOpen(false)
     }
 
-    const showList = open && (results.length > 0 || failed || (text.trim().length >= 2 && !loading))
+    // Only show list if there's actual text typed and it's open
+    const showList = open && text.trim().length >= 2 && (results.length > 0 || failed || !loading)
 
     return (
         <div ref={boxRef} style={{ position: 'relative' }}>
@@ -112,23 +123,23 @@ function PlaceInput({
                 <span style={{ width: 10, height: 10, borderRadius: '50%', background: dot, flexShrink: 0 }} />
                 <input
                     value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    onFocus={(e) => { e.target.select(); if (results.length) setOpen(true) }}
+                    onChange={(e) => { setText(e.target.value); setOpen(true) }}
+                    onFocus={() => { if (text.trim().length >= 2) setOpen(true) }}
                     onKeyDown={onKeyDown}
-                    placeholder={busy ? 'Finding your location...' : placeholder}
+                    placeholder={busy ? t('searchbox.findLocation') : placeholder}
                     style={{ flex: 1, minWidth: 0, border: 0, outline: 'none', padding: '10px 0', fontSize: 14, background: 'transparent', color: '#222' }}
                 />
                 {loading && <span style={{ fontSize: 11, color: '#888' }}>...</span>}
                 {text && !loading && (
-                    <button onClick={() => { setText(''); setResults([]); setOpen(false); onClear() }} aria-label="Clear" style={{ border: 0, background: 'none', fontSize: 16, cursor: 'pointer', color: '#888' }}>×</button>
+                    <button onClick={() => { setText(''); setResults([]); setOpen(false); onClear() }} aria-label={t('common.close')} style={{ border: 0, background: 'none', fontSize: 16, cursor: 'pointer', color: '#888' }}>×</button>
                 )}
                 {action}
             </div>
 
             {showList && (
-                <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, zIndex: 5, background: '#fff', borderRadius: 10, boxShadow: '0 2px 10px rgba(0,0,0,.3)', overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
+                <div style={{ position: 'absolute', left: 0, right: 0, top: '100%', marginTop: 4, zIndex: 50, background: '#fff', borderRadius: 10, boxShadow: '0 4px 14px rgba(0,0,0,.25)', overflow: 'hidden', maxHeight: 280, overflowY: 'auto' }}>
                     {failed && <div style={{ padding: 12, fontSize: 13, color: '#c00' }}>Search failed. Try again in a moment.</div>}
-                    {!failed && results.length === 0 && <div style={{ padding: 12, fontSize: 13, color: '#888' }}>No places found.</div>}
+                    {!failed && results.length === 0 && !loading && <div style={{ padding: 12, fontSize: 13, color: '#888' }}>No places found.</div>}
                     {results.map((r, i) => (
                         <div
                             key={i}
@@ -146,11 +157,11 @@ function PlaceInput({
     )
 }
 
-const MODES: { id: Mode; label: string; icon: string }[] = [
-    { id: 'drive', label: 'Drive', icon: '🚗' },
-    { id: 'ride', label: 'Ride', icon: '🚕' },
-    { id: 'transit', label: 'Transit', icon: '🚆' },
-    { id: 'walk', label: 'Walk', icon: '🚶' },
+const MODES: { id: Mode; labelKey: string; icon: string }[] = [
+    { id: 'drive', labelKey: 'modes.drive', icon: '🚗' },
+    { id: 'ride', labelKey: 'modes.ride', icon: '🚕' },
+    { id: 'transit', labelKey: 'modes.transit', icon: '🚆' },
+    { id: 'walk', labelKey: 'modes.walk', icon: '🚶' },
 ]
 
 export default function Searchbox({
@@ -169,6 +180,7 @@ export default function Searchbox({
     getBias?: () => [number, number] | undefined
 }) {
     const mobile = useIsMobile()
+    const { t } = useTranslation()
     const [weatherOpen, setWeatherOpen] = useState(false)
     const [todayForecast, setTodayForecast] = useState<WeatherForecastItem | null>(null)
     const [weatherLoading, setWeatherLoading] = useState(false)
@@ -186,21 +198,19 @@ export default function Searchbox({
                 if (!response.ok) throw new Error('Network response was not ok')
                 const data: WeatherForecastItem[] = await response.json()
 
-                // Get today's date string in YYYY-MM-DD local format
                 const now = new Date()
                 const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 
-                // Find forecast matching today's date
                 const found = data.find((item) => item.date === localDateStr) || data[0] || null
                 setTodayForecast(found)
             } catch (err) {
-                setWeatherError('Could not fetch weather data. Make sure the Node server is running.')
+                setWeatherError(t('searchbox.weatherError'))
             } finally {
                 setWeatherLoading(false)
             }
         }
         fetchWeather()
-    }, [weatherOpen, targetLocationName])
+    }, [weatherOpen, targetLocationName, t])
 
     const frame: React.CSSProperties = mobile
         ? { top: 0, left: 0, right: 0, borderRadius: '0 0 16px 16px', padding: 'calc(10px + env(safe-area-inset-top, 0px)) 12px 12px' }
@@ -212,21 +222,21 @@ export default function Searchbox({
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <PlaceInput
                         value={origin}
-                        placeholder="Starting point"
+                        placeholder={t('searchbox.startingPoint')}
                         dot="#2b7de9"
                         busy={locating}
                         onSelect={onOrigin}
                         onClear={() => onOrigin(null)}
                         getBias={getBias}
                         action={
-                            <button onClick={onUseMyLocation} title="Use my location" aria-label="Use my location" style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer', color: '#444' }}>
+                            <button onClick={onUseMyLocation} title={t('searchbox.useMyLocation')} aria-label={t('searchbox.useMyLocation')} style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer', color: '#444' }}>
                                 📍
                             </button>
                         }
                     />
                     <PlaceInput
                         value={destination}
-                        placeholder="Where to?"
+                        placeholder={t('searchbox.whereTo')}
                         dot="#e5484d"
                         onSelect={onDestination}
                         onClear={() => onDestination(null)}
@@ -234,8 +244,8 @@ export default function Searchbox({
                         action={
                             <button
                                 onClick={() => setWeatherOpen((o) => !o)}
-                                title="Toggle Weather Forecast"
-                                aria-label="Toggle Weather Forecast"
+                                title={t('searchbox.toggleWeather')}
+                                aria-label={t('searchbox.toggleWeather')}
                                 style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer', color: weatherOpen ? '#2b7de9' : '#444' }}
                             >
                                 ⛅
@@ -245,8 +255,8 @@ export default function Searchbox({
                 </div>
                 <button
                     onClick={onSwap}
-                    title="Swap"
-                    aria-label="Swap start and destination"
+                    title={t('common.swap')}
+                    aria-label={t('common.swap')}
                     style={{ border: '1px solid #ddd', background: '#fff', color: '#444', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}
                 >
                     ⇅
@@ -265,7 +275,7 @@ export default function Searchbox({
                             color: mode === m.id ? '#1d5fc0' : '#444',
                         }}
                     >
-                        {m.icon} {mobile ? '' : m.label}
+                        {m.icon} {mobile ? '' : t(m.labelKey)}
                     </button>
                 ))}
             </div>
@@ -274,7 +284,7 @@ export default function Searchbox({
                 <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 10 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                         <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>
-                            Today's Weather: {targetLocationName}
+                            {t('searchbox.weatherTitle')}: {targetLocationName}
                         </span>
                         <button
                             onClick={() => setWeatherOpen(false)}
@@ -284,20 +294,20 @@ export default function Searchbox({
                         </button>
                     </div>
 
-                    {weatherLoading && <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>Loading weather...</p>}
+                    {weatherLoading && <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>{t('common.loading')}</p>}
                     {weatherError && <p style={{ fontSize: 12, color: '#c00', margin: '10px 0' }}>{weatherError}</p>}
 
                     {!weatherLoading && !weatherError && !todayForecast && (
-                        <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>No weather data found for today.</p>
+                        <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>{t('searchbox.noWeather')}</p>
                     )}
 
                     {!weatherLoading && !weatherError && todayForecast && (
                         <div style={{ border: '1px solid #e5e5e5', padding: '10px', borderRadius: 6, fontSize: 12, background: '#fafafa' }}>
                             <div style={{ fontWeight: 600, color: '#222', marginBottom: 4 }}>Date: {todayForecast.date}</div>
-                            <div style={{ marginBottom: 2 }}><strong>Morning:</strong> {todayForecast.morning_forecast}</div>
-                            <div style={{ marginBottom: 2 }}><strong>Afternoon:</strong> {todayForecast.afternoon_forecast}</div>
-                            <div style={{ marginBottom: 2 }}><strong>Night:</strong> {todayForecast.night_forecast}</div>
-                            <div><strong>Temp:</strong> {todayForecast.min_temp}°C - {todayForecast.max_temp}°C</div>
+                            <div style={{ marginBottom: 2 }}><strong>{t('searchbox.morning')}:</strong> {todayForecast.morning_forecast}</div>
+                            <div style={{ marginBottom: 2 }}><strong>{t('searchbox.afternoon')}:</strong> {todayForecast.afternoon_forecast}</div>
+                            <div style={{ marginBottom: 2 }}><strong>{t('searchbox.night')}:</strong> {todayForecast.night_forecast}</div>
+                            <div><strong>{t('searchbox.temp')}:</strong> {todayForecast.min_temp}°C - {todayForecast.max_temp}°C</div>
                         </div>
                     )}
                 </div>

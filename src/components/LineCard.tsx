@@ -3,29 +3,27 @@ import type { MergedStation, RailLine, Station } from '../metro/types'
 import { railLineManager } from '../metro/RailLineManager'
 import { OPERATOR_LOGOS } from '../metro/operators'
 import { departuresForMembers, type Departure } from '../metro/live'
+import { useTranslation } from '../i18n/TranslationContext'
 
 export interface CardMember {
     line: RailLine
     station?: Station
 }
 
-// "Now", "12 min", "3 h 11 min"
-const fmtMin = (m: number) => {
-    if (m <= 0) return 'Now'
+const fmtMin = (m: number, t: (key: string, params?: any) => string) => {
+    if (m <= 0) return t('common.now') || 'Now'
     if (m < 60) return `${m} min`
     const h = Math.floor(m / 60)
     const r = m % 60
     return r ? `${h} h ${r} min` : `${h} h`
 }
 
-// readable text colour on top of a line colour
 const ink = (hex: string) => {
     const n = parseInt(hex.replace('#', ''), 16)
     const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
     return lum > 0.62 ? '#222' : '#fff'
 }
 
-// "From Bandar Utama to Johan Setia" / "To Tamsui" -> the destination
 const destOf = (h: string) => h.match(/\bto\s+(.+)$/i)?.[1] ?? h
 
 function colorFor(d: Departure, members: CardMember[]) {
@@ -37,7 +35,7 @@ function colorFor(d: Departure, members: CardMember[]) {
     return (hit ?? (members.length === 1 ? members[0] : undefined))?.line.color ?? '#9aa3af'
 }
 
-const walkMin = (m: number) => Math.max(1, Math.round((m * 1.3) / 80)) // ~80 m per minute, with a detour factor
+const walkMin = (m: number) => Math.max(1, Math.round((m * 1.3) / 80))
 
 function LineChip({ line }: { line: RailLine }) {
     return (
@@ -45,8 +43,8 @@ function LineChip({ line }: { line: RailLine }) {
             title={line.name}
             style={{ display: 'inline-block', background: line.color, color: ink(line.color), borderRadius: 999, padding: '1px 8px', fontSize: 11.5, fontWeight: 800, lineHeight: '18px' }}
         >
-      {line.code}
-    </span>
+            {line.code}
+        </span>
     )
 }
 
@@ -75,13 +73,13 @@ const linkRow: React.CSSProperties = {
     padding: '8px 0', border: 0, background: 'none', font: 'inherit', color: 'inherit',
 }
 
-/** Station card: lines you can change to here, plus stations a short walk away */
 function StationConnections({
                                 station, onJump,
                             }: {
     station: MergedStation
     onJump?: (c: [number, number]) => void
 }) {
+    const { t } = useTranslation()
     const nearby = useMemo(() => railLineManager.getNearbyConnections(station), [station])
     const interchange = station.members.length > 1
 
@@ -91,7 +89,7 @@ function StationConnections({
         <div style={{ marginTop: 14 }}>
             {interchange && (
                 <div style={{ marginBottom: nearby.length ? 12 : 0 }}>
-                    <div style={{ ...sectionTitle, marginBottom: 6 }}>Change here to</div>
+                    <div style={{ ...sectionTitle, marginBottom: 6 }}>{t('lineCard.changeHere')}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {station.members.map((m) => <LineChip key={m.line.id} line={m.line} />)}
                     </div>
@@ -100,7 +98,7 @@ function StationConnections({
 
             {nearby.length > 0 && (
                 <div>
-                    <div style={{ ...sectionTitle, marginBottom: 2 }}>Nearby connections</div>
+                    <div style={{ ...sectionTitle, marginBottom: 2 }}>{t('lineCard.nearbyConnections')}</div>
                     {nearby.map((c, i) => (
                         <button
                             key={i}
@@ -109,12 +107,12 @@ function StationConnections({
                         >
                             <span style={{ fontSize: 15 }}>🚶</span>
                             <span style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ display: 'block', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.station.name}</span>
-                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
-                  {c.station.members.map((m) => <LineChip key={m.line.id} line={m.line} />)}
-                </span>
-              </span>
-                            <span style={{ fontSize: 12, color: '#7b8493', whiteSpace: 'nowrap' }}>{walkMin(c.distM)} min walk</span>
+                                <span style={{ display: 'block', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.station.name}</span>
+                                <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
+                                    {c.station.members.map((m) => <LineChip key={m.line.id} line={m.line} />)}
+                                </span>
+                            </span>
+                            <span style={{ fontSize: 12, color: '#7b8493', whiteSpace: 'nowrap' }}>{t('lineCard.walkMin', { min: walkMin(c.distM) })}</span>
                         </button>
                     ))}
                 </div>
@@ -123,8 +121,8 @@ function StationConnections({
     )
 }
 
-/** Track card: every interchange along one line */
 function LineInterchanges({ line, onJump }: { line: RailLine; onJump?: (c: [number, number]) => void }) {
+    const { t } = useTranslation()
     const [open, setOpen] = useState(false)
     const list = useMemo(() => (open ? railLineManager.getLineInterchanges(line) : []), [open, line])
 
@@ -134,11 +132,11 @@ function LineInterchanges({ line, onJump }: { line: RailLine; onJump?: (c: [numb
                 onClick={() => setOpen((o) => !o)}
                 style={{ border: 0, background: 'none', padding: '2px 0', font: 'inherit', fontSize: 12.5, fontWeight: 700, color: '#2b6fd6', cursor: 'pointer' }}
             >
-                {open ? 'Hide interchanges ▴' : 'Show interchanges ▾'}
+                {open ? t('lineCard.hideInterchanges') : t('lineCard.showInterchanges')}
             </button>
             {open && (
                 <div style={{ maxHeight: 'min(220px, 30vh)', overflowY: 'auto' }}>
-                    {!list.length && <div style={{ fontSize: 12.5, color: '#8a93a0', padding: '6px 0' }}>No interchanges found on this line.</div>}
+                    {!list.length && <div style={{ fontSize: 12.5, color: '#8a93a0', padding: '6px 0' }}>{t('lineCard.noInterchanges')}</div>}
                     {list.map((x, i) => (
                         <button
                             key={i}
@@ -155,7 +153,7 @@ function LineInterchanges({ line, onJump }: { line: RailLine; onJump?: (c: [numb
     )
 }
 
-type Timetable = Departure[] | 'nodata' | 'error' | undefined // undefined = loading
+type Timetable = Departure[] | 'nodata' | 'error' | undefined
 
 export default function LineCard({
                                      title,
@@ -170,6 +168,7 @@ export default function LineCard({
     showTimetable?: boolean
     onJump?: (coordinates: [number, number]) => void
 }) {
+    const { t } = useTranslation()
     const [timetable, setTimetable] = useState<Timetable>(undefined)
 
     useEffect(() => {
@@ -203,7 +202,6 @@ export default function LineCard({
                 fontSize: 'clamp(13px, 3.4vw, 14px)',
             }}
         >
-            {/* one colour segment per line */}
             <div style={{ display: 'flex', height: 6 }}>
                 {members.map((m) => <div key={m.line.id} style={{ flex: 1, background: m.line.color }} />)}
             </div>
@@ -213,12 +211,11 @@ export default function LineCard({
                     <div style={{ paddingRight: 26, marginBottom: 12 }}>
                         <div style={{ fontWeight: 800, fontSize: 'clamp(17px, 5vw, 21px)', lineHeight: 1.2, letterSpacing: -0.2 }}>{title}</div>
                         {members.length > 1 && (
-                            <div style={{ fontSize: 12, color: '#8a93a0', marginTop: 2 }}>Interchange · {members.length} lines</div>
+                            <div style={{ fontSize: 12, color: '#8a93a0', marginTop: 2 }}>{t('lineCard.interchange', { count: members.length })}</div>
                         )}
                     </div>
                 )}
 
-                {/* lines */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingRight: title ? 0 : 22 }}>
                     {members.map((m) => (
                         <div key={m.line.id} style={{ background: '#f6f7f9', borderRadius: 12, padding: '9px 10px' }}>
@@ -239,37 +236,34 @@ export default function LineCard({
                                     <OperatorLogo operator={m.line.operator} />
                                     {m.station?.code && (
                                         <span style={{ background: '#fff', border: '1px solid #e2e5ea', borderRadius: 8, padding: '0 6px', fontSize: 11, fontWeight: 700, color: '#556' }}>
-                      {m.station.code}
-                    </span>
+                                            {m.station.code}
+                                        </span>
                                     )}
                                 </div>
                             </div>
-                            {/* clicking a track (no station): list this line's interchanges */}
                             {!station && <LineInterchanges line={m.line} onJump={onJump} />}
                         </div>
                     ))}
                 </div>
 
-                {/* clicking a station: interchange + nearby connections */}
                 {station && <StationConnections station={station} onJump={onJump} />}
 
-                {/* timetable */}
                 {showTimetable && (
                     <div style={{ marginTop: 14 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <span style={sectionTitle}>Next departures</span>
+                            <span style={sectionTitle}>{t('lineCard.nextDepartures')}</span>
                             <span
-                                title={estimated ? 'Calculated from first/last train and how often trains run, not an official timetable' : undefined}
+                                title={estimated ? t('lineCard.estimatedTooltip') : undefined}
                                 style={{ fontSize: 10.5, color: estimated ? '#8a5a00' : '#9aa3af', background: estimated ? '#fff3d6' : '#f1f3f6', borderRadius: 8, padding: '1px 7px' }}
                             >
-                {estimated ? 'Estimated' : 'Scheduled'}
-              </span>
+                                {estimated ? t('lineCard.estimated') : t('lineCard.scheduled')}
+                            </span>
                         </div>
 
-                        {timetable === undefined && <div style={muted}>Loading...</div>}
-                        {timetable === 'nodata' && <div style={muted}>No timetable source for this operator yet.</div>}
-                        {timetable === 'error' && <div style={{ ...muted, color: '#c33' }}>Timetable unavailable. Run the timetable scripts in /scripts.</div>}
-                        {Array.isArray(timetable) && timetable.length === 0 && <div style={muted}>No more scheduled departures today.</div>}
+                        {timetable === undefined && <div style={muted}>{t('common.loading')}</div>}
+                        {timetable === 'nodata' && <div style={muted}>{t('lineCard.noTimetable')}</div>}
+                        {timetable === 'error' && <div style={{ ...muted, color: '#c33' }}>{t('lineCard.errorTimetable')}</div>}
+                        {Array.isArray(timetable) && timetable.length === 0 && <div style={muted}>{t('lineCard.noMoreDepartures')}</div>}
 
                         {Array.isArray(timetable) && timetable.length > 0 && (
                             <div style={{ maxHeight: 'min(230px, 32vh)', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -286,8 +280,8 @@ export default function LineCard({
                                             <span
                                                 style={{ whiteSpace: 'nowrap', fontWeight: 700, fontSize: 12.5, padding: '3px 10px', borderRadius: 999, background: soon ? '#fdeaea' : '#eef2f7', color: soon ? '#d22' : '#2a3342' }}
                                             >
-                        {fmtMin(d.inMin)}
-                      </span>
+                                                {fmtMin(d.inMin, t)}
+                                            </span>
                                         </div>
                                     )
                                 })}
