@@ -6,6 +6,20 @@ interface Result extends Place {
     detail: string
 }
 
+interface WeatherForecastItem {
+    date: string
+    morning_forecast: string
+    afternoon_forecast: string
+    night_forecast: string
+    min_temp: number
+    max_temp: number
+    location: {
+        location_id: string
+        location_name: string
+        state: string
+    }
+}
+
 const ENDPOINT = 'https://photon.komoot.io/api/'
 
 function toResult(f: any): Result | null {
@@ -40,10 +54,8 @@ function PlaceInput({
     const valueRef = useRef(value)
     valueRef.current = value
 
-    // keep the text in step with the value (swap, auto location, clear)
     useEffect(() => { setText(value?.name ?? '') }, [value])
 
-    // debounced search
     useEffect(() => {
         const q = text.trim()
         if (q.length < 2 || q === valueRef.current?.name) {
@@ -157,8 +169,39 @@ export default function Searchbox({
     getBias?: () => [number, number] | undefined
 }) {
     const mobile = useIsMobile()
+    const [weatherOpen, setWeatherOpen] = useState(false)
+    const [todayForecast, setTodayForecast] = useState<WeatherForecastItem | null>(null)
+    const [weatherLoading, setWeatherLoading] = useState(false)
+    const [weatherError, setWeatherError] = useState<string | null>(null)
 
-    // phones: a full-width bar across the top; desktop: a floating card
+    const targetLocationName = destination?.name || 'Kuala Lumpur'
+
+    useEffect(() => {
+        if (!weatherOpen) return
+        const fetchWeather = async () => {
+            setWeatherLoading(true)
+            setWeatherError(null)
+            try {
+                const response = await fetch(`http://localhost:5000/api/weather?location=${encodeURIComponent(targetLocationName)}`)
+                if (!response.ok) throw new Error('Network response was not ok')
+                const data: WeatherForecastItem[] = await response.json()
+
+                // Get today's date string in YYYY-MM-DD local format
+                const now = new Date()
+                const localDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+
+                // Find forecast matching today's date
+                const found = data.find((item) => item.date === localDateStr) || data[0] || null
+                setTodayForecast(found)
+            } catch (err) {
+                setWeatherError('Could not fetch weather data. Make sure the Node server is running.')
+            } finally {
+                setWeatherLoading(false)
+            }
+        }
+        fetchWeather()
+    }, [weatherOpen, targetLocationName])
+
     const frame: React.CSSProperties = mobile
         ? { top: 0, left: 0, right: 0, borderRadius: '0 0 16px 16px', padding: 'calc(10px + env(safe-area-inset-top, 0px)) 12px 12px' }
         : { top: 12, left: 12, width: 340, borderRadius: 12, padding: 10 }
@@ -188,6 +231,16 @@ export default function Searchbox({
                         onSelect={onDestination}
                         onClear={() => onDestination(null)}
                         getBias={getBias}
+                        action={
+                            <button
+                                onClick={() => setWeatherOpen((o) => !o)}
+                                title="Toggle Weather Forecast"
+                                aria-label="Toggle Weather Forecast"
+                                style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer', color: weatherOpen ? '#2b7de9' : '#444' }}
+                            >
+                                ⛅
+                            </button>
+                        }
                     />
                 </div>
                 <button
@@ -216,6 +269,39 @@ export default function Searchbox({
                     </button>
                 ))}
             </div>
+
+            {weatherOpen && (
+                <div style={{ marginTop: 12, borderTop: '1px solid #eee', paddingTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: '#333' }}>
+                            Today's Weather: {targetLocationName}
+                        </span>
+                        <button
+                            onClick={() => setWeatherOpen(false)}
+                            style={{ border: 0, background: 'none', fontSize: 14, cursor: 'pointer', color: '#888' }}
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    {weatherLoading && <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>Loading weather...</p>}
+                    {weatherError && <p style={{ fontSize: 12, color: '#c00', margin: '10px 0' }}>{weatherError}</p>}
+
+                    {!weatherLoading && !weatherError && !todayForecast && (
+                        <p style={{ fontSize: 12, color: '#666', textAlign: 'center', margin: '10px 0' }}>No weather data found for today.</p>
+                    )}
+
+                    {!weatherLoading && !weatherError && todayForecast && (
+                        <div style={{ border: '1px solid #e5e5e5', padding: '10px', borderRadius: 6, fontSize: 12, background: '#fafafa' }}>
+                            <div style={{ fontWeight: 600, color: '#222', marginBottom: 4 }}>Date: {todayForecast.date}</div>
+                            <div style={{ marginBottom: 2 }}><strong>Morning:</strong> {todayForecast.morning_forecast}</div>
+                            <div style={{ marginBottom: 2 }}><strong>Afternoon:</strong> {todayForecast.afternoon_forecast}</div>
+                            <div style={{ marginBottom: 2 }}><strong>Night:</strong> {todayForecast.night_forecast}</div>
+                            <div><strong>Temp:</strong> {todayForecast.min_temp}°C - {todayForecast.max_temp}°C</div>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     )
 }

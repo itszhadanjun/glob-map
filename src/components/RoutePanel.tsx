@@ -23,7 +23,7 @@ const iconBtn: React.CSSProperties = {
 }
 
 export default function RoutePanel({
-                                       destination, routes, selected, status, error, collapsed,
+                                       destination, routes, selected, status, error, collapsed, refining = false,
                                        onSelect, onClose, onToggle, onStepClick, onStart,
                                    }: {
     destination: Place
@@ -32,6 +32,7 @@ export default function RoutePanel({
     status: RouteStatus
     error: string
     collapsed: boolean
+    refining?: boolean
     onSelect: (i: number) => void
     onClose: () => void
     onToggle: () => void
@@ -115,6 +116,12 @@ export default function RoutePanel({
                     {status === 'routing' && <div style={{ padding: 14, fontSize: 13, color: '#666' }}>Finding routes...</div>}
                     {status === 'error' && <div style={{ padding: 14, fontSize: 13, color: '#c00' }}>{error || 'No route found.'}</div>}
                     {!routes.length && status === 'idle' && <div style={{ padding: 14, fontSize: 13, color: '#666' }}>Set a starting point to see routes.</div>}
+
+                    {refining && (
+                        <div style={{ padding: '6px 14px', fontSize: 12, color: '#7c3aed', background: '#f5f0ff' }}>
+                            Checking for skybridges...
+                        </div>
+                    )}
 
                     {routes.map((r, i) => (
                         <div

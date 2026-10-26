@@ -10,7 +10,288 @@ const R: RailLine = {
   type: 'MRT',
   operator: "Taipei Metro",
   color: '#E3002C',
-  stations: [],
+  stations: [
+  {
+    "code": "R22",
+    "name": "Beitou",
+    "coordinates": [
+      121.49859,
+      25.13193
+    ]
+  },
+  {
+    "code": "R22A",
+    "name": "Xinbeitou",
+    "coordinates": [
+      121.50317,
+      25.13696
+    ]
+  },
+  {
+    "code": "R28",
+    "name": "Tamsui",
+    "coordinates": [
+      121.44553,
+      25.16771
+    ]
+  },
+  {
+    "code": "R27",
+    "name": "Hongshulin",
+    "coordinates": [
+      121.45883,
+      25.15441
+    ]
+  },
+  {
+    "code": "R26",
+    "name": "Zhuwei",
+    "coordinates": [
+      121.45951,
+      25.13697
+    ]
+  },
+  {
+    "code": "R25",
+    "name": "Guandu",
+    "coordinates": [
+      121.46714,
+      25.1257
+    ]
+  },
+  {
+    "code": "R24",
+    "name": "Zhongyi",
+    "coordinates": [
+      121.47337,
+      25.13095
+    ]
+  },
+  {
+    "code": "R23",
+    "name": "Fuxinggang",
+    "coordinates": [
+      121.4855,
+      25.13749
+    ]
+  },
+  {
+    "code": "R21",
+    "name": "Qiyan",
+    "coordinates": [
+      121.50114,
+      25.1256
+    ]
+  },
+  {
+    "code": "R20",
+    "name": "Qilian",
+    "coordinates": [
+      121.50613,
+      25.1209
+    ]
+  },
+  {
+    "code": "R19",
+    "name": "Shipai",
+    "coordinates": [
+      121.51552,
+      25.11461
+    ]
+  },
+  {
+    "code": "R18",
+    "name": "Mingde",
+    "coordinates": [
+      121.51877,
+      25.10986
+    ]
+  },
+  {
+    "code": "R17",
+    "name": "Zhishan",
+    "coordinates": [
+      121.52252,
+      25.103
+    ]
+  },
+  {
+    "code": "R16",
+    "name": "Shilin",
+    "coordinates": [
+      121.52625,
+      25.09349
+    ]
+  },
+  {
+    "code": "R15",
+    "name": "Jiantan",
+    "coordinates": [
+      121.52498,
+      25.08429
+    ]
+  },
+  {
+    "code": "",
+    "name": "Yuanshan",
+    "coordinates": [
+      121.52007,
+      25.07143
+    ]
+  },
+  {
+    "code": "R13;O11",
+    "name": "Minquan W. Rd.",
+    "coordinates": [
+      121.5194,
+      25.06285
+    ]
+  },
+  {
+    "code": "R12",
+    "name": "Shuanglian",
+    "coordinates": [
+      121.5207,
+      25.05763
+    ]
+  },
+  {
+    "code": "R11;G14",
+    "name": "Zhongshan",
+    "coordinates": [
+      121.52039,
+      25.05263
+    ]
+  },
+  {
+    "code": "R10;BL12",
+    "name": "Taipei main station",
+    "coordinates": [
+      121.51747,
+      25.04624
+    ]
+  },
+  {
+    "code": "R09",
+    "name": "NTU Hospital",
+    "coordinates": [
+      121.51618,
+      25.04165
+    ]
+  },
+  {
+    "code": "R08;G10",
+    "name": "Chiang Kai-Shek Memorial Hall",
+    "coordinates": [
+      121.51755,
+      25.0337
+    ]
+  },
+  {
+    "code": "O06;R07",
+    "name": "Dongmen",
+    "coordinates": [
+      121.52926,
+      25.03384
+    ]
+  },
+  {
+    "code": "R06",
+    "name": "Daan Park",
+    "coordinates": [
+      121.53528,
+      25.03356
+    ]
+  },
+  {
+    "code": "BR09;R05",
+    "name": "Daan",
+    "coordinates": [
+      121.54355,
+      25.03333
+    ]
+  },
+  {
+    "code": "",
+    "name": "Xinyi Anhe",
+    "coordinates": [
+      121.55267,
+      25.03307
+    ]
+  },
+  {
+    "code": "",
+    "name": "Taipei 101/World Trade Center",
+    "coordinates": [
+      121.56244,
+      25.03286
+    ]
+  },
+  {
+    "code": "",
+    "name": "Xiangshan",
+    "coordinates": [
+      121.56975,
+      25.03276
+    ]
+  },
+  {
+    "code": "",
+    "name": "Guangci/Fengtian Temple Station",
+    "coordinates": [
+      121.58221,
+      25.03735
+    ]
+  },
+  {
+    "code": "",
+    "name": "Guangci/Fengtian Temple Station",
+    "coordinates": [
+      121.58217,
+      25.03745
+    ]
+  },
+  {
+    "code": "R03",
+    "name": "Xiangshan",
+    "coordinates": [
+      121.56977,
+      25.03292
+    ]
+  },
+  {
+    "code": "",
+    "name": "Taipei 101/World Trade Center",
+    "coordinates": [
+      121.56245,
+      25.03304
+    ]
+  },
+  {
+    "code": "",
+    "name": "Xinyi Anhe",
+    "coordinates": [
+      121.55267,
+      25.03324
+    ]
+  },
+  {
+    "code": "",
+    "name": "Yuanshan",
+    "coordinates": [
+      121.52021,
+      25.07141
+    ]
+  },
+  {
+    "code": "R28",
+    "name": "Tamsui",
+    "coordinates": [
+      121.4456,
+      25.16783
+    ]
+  }
+] as RailLine['stations'],
   path: path as [number, number][][],
 }
 

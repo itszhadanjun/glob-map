@@ -74,6 +74,8 @@ function App() {
     const [status, setStatus] = useState<RouteStatus>('idle')
     const [error, setError] = useState('')
     const [locating, setLocating] = useState(false)
+    const [refining, setRefining] = useState(false)
+    const fitNext = useRef(false)
     const endMarkers = useRef<maplibregl.Marker[]>([])
 
     // journey state
@@ -236,6 +238,7 @@ function App() {
                 layout: { 'line-join': 'round', 'line-cap': 'round' },
                 paint: { 'line-color': '#fff', 'line-width': 9 },
             })
+            // solid line: driving, train rides and skybridges (anything that isn't a walk)
             map.addLayer({
                 id: 'route-solid',
                 type: 'line',
@@ -281,6 +284,7 @@ function App() {
             }
 
             map.on('click', (e) => {
+                // clicking an alternative route must not also open a line popup
                 if (map.queryRenderedFeatures(e.point, { layers: ['route-alt'] }).length) return
                 const lines = linesAt(e.point)
                 if (!lines.length) return
@@ -386,23 +390,46 @@ function App() {
 
     // ---------- route planning effects ----------
 
+    // fetch routes whenever start, destination or mode changes; early results show immediately
     useEffect(() => {
         if (!origin || !destination) {
             setRoutes([])
             setStatus('idle')
+            setRefining(false)
             return
         }
         const ctrl = new AbortController()
+        let first = true
+        fitNext.current = true
         setStatus('routing')
+        setRefining(false)
         setError('')
-        fetchRoutes(mode, origin.coordinates, destination.coordinates, ctrl.signal)
-            .then((rs) => { setRoutes(rs); setSelected(0); setStatus('idle'); setPanelCollapsed(false) })
+
+        fetchRoutes(mode, origin.coordinates, destination.coordinates, ctrl.signal, (rs) => {
+            // an early result: show it now and keep improving in the background
+            setRoutes(rs)
+            if (first) { setSelected(0); first = false }
+            setStatus('idle')
+            setPanelCollapsed(false)
+            setRefining(true)
+        })
+            .then((rs) => {
+                setRoutes(rs)
+                if (first) setSelected(0)
+                else setSelected((s) => Math.min(s, rs.length - 1))
+                setStatus('idle')
+                setPanelCollapsed(false)
+                setRefining(false)
+            })
             .catch((e) => {
                 if (e.name === 'AbortError') return
                 console.warn(e)
-                setRoutes([])
-                setError(e.message)
-                setStatus('error')
+                setRefining(false)
+                if (first) {
+                    setRoutes([])
+                    setError(e.message)
+                    setStatus('error')
+                }
             })
         return () => ctrl.abort()
     }, [origin, destination, mode])
@@ -433,10 +460,12 @@ function App() {
         })
     }, [routes, selected])
 
-    // zoom to new routes (not when switching between them, and never during a journey)
+    // zoom to the routes once per search (not when the list improves or you switch options), never during a journey
     useEffect(() => {
         const map = mapRef.current
         if (!map || !routes.length || navigatingRef.current) return
+        if (!fitNext.current) return
+        fitNext.current = false
         const first = routes[0].legs[0].coordinates[0]
         const b = new maplibregl.LngLatBounds(first, first)
         routes.forEach((r) => r.legs.forEach((leg) => leg.coordinates.forEach((c) => b.extend(c))))
@@ -570,6 +599,7 @@ function App() {
                     status={status}
                     error={error}
                     collapsed={panelCollapsed}
+                    refining={refining}
                     onSelect={setSelected}
                     onClose={() => setDestination(null)}
                     onToggle={() => setPanelCollapsed((c) => !c)}

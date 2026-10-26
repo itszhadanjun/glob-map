@@ -57,6 +57,7 @@ git clone https://github.com/itszhadanjun/glob-map.git
 cd glob-map
 npm install
 npm install maplibre-gl gtfs-realtime-bindings
+npm install dotenv @types/express @types/cors
 npm install -D fflate csv-parse
 ```
 

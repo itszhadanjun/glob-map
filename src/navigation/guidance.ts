@@ -22,10 +22,11 @@ export function bearing(a: LngLat, b: LngLat) {
     return ((Math.atan2(y, x) / r) + 360) % 360
 }
 
-/** All legs of a route joined into one path */
+/** All legs of a route joined into one path (skybridge overlays are display-only and skipped) */
 export function buildPath(route: Route): PathIndex {
     const coords: LngLat[] = []
     for (const leg of route.legs) {
+        if (leg.kind === 'bridge') continue
         for (const c of leg.coordinates) {
             const l = coords[coords.length - 1]
             if (!l || l[0] !== c[0] || l[1] !== c[1]) coords.push(c)
