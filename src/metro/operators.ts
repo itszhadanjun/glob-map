@@ -4,7 +4,7 @@ export const OPERATOR_LOGOS: Record<string, string> = {
     'Rapid Rail': '/logos/rapid-rail.svg',
     'RapidKL': '/logos/rapid-rail.svg',
     'Express Rail Link': '/logos/erl.svg',
-    'KTM Komuter': '/logos/ktm.svg',
+    'KTMB': '/logos/ktm.svg',
     'SMRT': '/logos/smrt.svg',
     'SBS Transit': '/logos/sbs-transit.svg',
     'Taipei Metro': '/logos/taipei-metro.svg',

@@ -18,4 +18,6 @@ export const MANUAL_MERGES: ManualMerge[] = [
     { name: 'Sungai Buloh', stations: ['MY-PYL:Sungai Buloh(PY)', 'MY-PKL:Sungai Buloh(KTM)', 'MY-ETS:Sungai Buloh(KTM)'] },
     { name: 'USJ 7', stations: ['MY-KJL:USJ 7', 'MY-BRT:USJ 7'] },
     { name: 'Sunway-Setia Jaya', stations: ['MY-BRT:Sunway-Setia Jaya', 'MY-PKL:Setia Jaya'] },
+    { name: 'Subang Jaya', stations: ['MY-PKL:Subang Jaya(KTM)', 'MY-KJL:Subang Jaya(LRT)'] },
+    { name: 'Glenmarie', stations: ['MY-SAL:Glenmarie 2', 'MY-KJL:Glenmarie'] },
 ]

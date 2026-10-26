@@ -8,7 +8,7 @@ const ETS: RailLine = {
   name: "KTM ETS",
   country: 'MY',
   type: 'Commuter',
-  operator: "KTM Komuter",
+  operator: "KTMB",
   color: '#ff0000',
   stations: [
   {

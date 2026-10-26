@@ -9,13 +9,14 @@ import { railLineManager } from './metro/RailLineManager'
 import { fetchVehicles } from './metro/live'
 import { iconKinds, iconSvg } from './metro/icons'
 import { snapToLines } from './metro/snap'
-import { REGIONS, LINE_ZOOM, MARKER_ZOOM } from './metro/regions'
+import { REGIONS, LINE_ZOOM, VEHICLE_ZOOM, MARKER_ZOOM, viewedCountry } from './metro/regions'
 import type { MergedStation } from './metro/types'
 import LineCard from './components/LineCard'
 import Searchbox from './components/Searchbox'
 import RoutePanel from './components/RoutePanel'
 import type { RouteStatus } from './components/RoutePanel'
 import NavigationHUD from './components/NavigationHUD'
+import { useIsMobile } from './hooks/useIsMobile'
 import { fetchRoutes } from './navigation/routing'
 import type { LngLat, Mode, Place, Route } from './navigation/routing'
 import { useJourney } from './navigation/useJourney'
@@ -58,6 +59,11 @@ function createStationElement(st: MergedStation) {
 function App() {
     const mapContainer = useRef<HTMLDivElement | null>(null)
     const mapRef = useRef<maplibregl.Map | null>(null)
+
+    const isMobile = useIsMobile()
+    const isMobileRef = useRef(isMobile)
+    isMobileRef.current = isMobile
+    const [panelCollapsed, setPanelCollapsed] = useState(false)
 
     // route planning state
     const [origin, setOrigin] = useState<Place | null>(null)
@@ -165,8 +171,11 @@ function App() {
             zoom: 11,
         })
 
-        // dragging the map during a journey stops the camera following
-        map.on('dragstart', () => { if (navigatingRef.current) setFollowing(false) })
+        // dragging the map: stop following during a journey, minimise the route sheet on phones
+        map.on('dragstart', () => {
+            if (navigatingRef.current) setFollowing(false)
+            else if (isMobileRef.current) setPanelCollapsed(true)
+        })
 
         const openPopup = (lngLat: [number, number] | maplibregl.LngLat, content: ReactNode) => {
             popup?.remove()
@@ -202,7 +211,10 @@ function App() {
                     type: 'line',
                     source: line.id,
                     layout: { 'line-join': 'round', 'line-cap': 'round', visibility: 'none' },
-                    paint: { 'line-color': line.color, 'line-width': 4 },
+                    paint: {
+                        'line-color': line.color,
+                        'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.5, 9, 3, 13, 4],
+                    },
                 })
             }
 
@@ -272,7 +284,13 @@ function App() {
                 if (map.queryRenderedFeatures(e.point, { layers: ['route-alt'] }).length) return
                 const lines = linesAt(e.point)
                 if (!lines.length) return
-                openPopup(e.lngLat, <LineCard members={lines.map((line) => ({ line }))} />)
+                openPopup(
+                    e.lngLat,
+                    <LineCard
+                        members={lines.map((line) => ({ line }))}
+                        onJump={(c) => map.flyTo({ center: c, zoom: 17 })}
+                    />,
+                )
             })
             map.on('mousemove', (e) => {
                 const onAlt = map.queryRenderedFeatures(e.point, { layers: ['route-alt'] }).length > 0
@@ -310,30 +328,38 @@ function App() {
             const updateVisibility = () => {
                 const z = map.getZoom()
                 const b = map.getBounds()
+                const c = map.getCenter()
+                const country = viewedCountry(c.lng, c.lat, [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()])
 
-                const activeCountries = new Set(
-                    REGIONS.filter(
-                        (r) => !(b.getWest() > r.bbox[2] || b.getEast() < r.bbox[0] || b.getSouth() > r.bbox[3] || b.getNorth() < r.bbox[1]),
-                    ).map((r) => r.country),
-                )
                 const showLines = z >= LINE_ZOOM
                 const showMarkers = z >= MARKER_ZOOM
 
+                // only the lines of the country you are looking at
                 for (const line of railLineManager.getAll()) {
-                    const visible = showLines && activeCountries.has(line.country)
+                    const visible = showLines && line.country === country
                     map.setLayoutProperty(line.id, 'visibility', visible ? 'visible' : 'none')
                 }
-                map.setLayoutProperty('vehicles', 'visibility', showLines && activeCountries.has('MY') ? 'visible' : 'none')
+                map.setLayoutProperty('vehicles', 'visibility', z >= VEHICLE_ZOOM && country === 'MY' ? 'visible' : 'none')
 
+                // station markers: close up, same country, inside the viewport
                 for (const { id, st } of stations) {
-                    const want = showMarkers && activeCountries.has(st.members[0].line.country) && b.contains(st.coordinates)
+                    const want = showMarkers && st.members[0].line.country === country && b.contains(st.coordinates)
                     const existing = markers.get(id)
 
                     if (want && !existing) {
                         const el = createStationElement(st)
                         el.onclick = (e) => {
                             e.stopPropagation()
-                            openPopup(st.coordinates, <LineCard title={st.name} members={st.members} showTimetable />)
+                            openPopup(
+                                st.coordinates,
+                                <LineCard
+                                    title={st.name}
+                                    members={st.members}
+                                    station={st}
+                                    showTimetable
+                                    onJump={(c) => map.flyTo({ center: c, zoom: 17 })}
+                                />,
+                            )
                         }
                         markers.set(id, new maplibregl.Marker({ element: el }).setLngLat(st.coordinates).addTo(map))
                     } else if (!want && existing) {
@@ -347,7 +373,7 @@ function App() {
             map.on('moveend', updateVisibility)
         })
 
-        map.addControl(new maplibregl.NavigationControl(), 'top-right')
+        map.addControl(new maplibregl.NavigationControl(), 'bottom-right')
         mapRef.current = map
 
         return () => {
@@ -370,7 +396,7 @@ function App() {
         setStatus('routing')
         setError('')
         fetchRoutes(mode, origin.coordinates, destination.coordinates, ctrl.signal)
-            .then((rs) => { setRoutes(rs); setSelected(0); setStatus('idle') })
+            .then((rs) => { setRoutes(rs); setSelected(0); setStatus('idle'); setPanelCollapsed(false) })
             .catch((e) => {
                 if (e.name === 'AbortError') return
                 console.warn(e)
@@ -414,7 +440,12 @@ function App() {
         const first = routes[0].legs[0].coordinates[0]
         const b = new maplibregl.LngLatBounds(first, first)
         routes.forEach((r) => r.legs.forEach((leg) => leg.coordinates.forEach((c) => b.extend(c))))
-        map.fitBounds(b, { padding: { top: 80, bottom: 80, left: 400, right: 60 }, maxZoom: 17 })
+        map.fitBounds(b, {
+            padding: isMobileRef.current
+                ? { top: 190, bottom: 330, left: 40, right: 40 }
+                : { top: 80, bottom: 80, left: 400, right: 60 },
+            maxZoom: 17,
+        })
     }, [routes])
 
     // destination chosen but no start yet
@@ -426,6 +457,12 @@ function App() {
     }, [destination])
 
     // ---------- journey effects ----------
+
+    // hide the zoom controls while navigating (the HUD owns the bottom edge)
+    useEffect(() => {
+        document.documentElement.classList.toggle('navigating', navigating)
+        return () => document.documentElement.classList.remove('navigating')
+    }, [navigating])
 
     // hide alternatives while navigating
     useEffect(() => {
@@ -473,7 +510,7 @@ function App() {
                 center: lngLat,
                 bearing: heading ?? map.getBearing(),
                 pitch: 55,
-                padding: { top: 260, bottom: 60, left: 0, right: 0 }, // keeps the arrow in the lower half
+                padding: { top: 260, bottom: 60, left: 0, right: 0 },
                 duration: 900,
                 easing: (t) => t,
             })
@@ -532,8 +569,10 @@ function App() {
                     selected={selected}
                     status={status}
                     error={error}
+                    collapsed={panelCollapsed}
                     onSelect={setSelected}
                     onClose={() => setDestination(null)}
+                    onToggle={() => setPanelCollapsed((c) => !c)}
                     onStepClick={(c) => mapRef.current?.flyTo({ center: c, zoom: 18 })}
                     onStart={startJourney}
                 />

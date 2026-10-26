@@ -15,15 +15,25 @@ const distM = (a: [number, number], b: [number, number]) => {
     return Math.hypot((b[1] - a[1]) * k, (b[0] - a[0]) * k * Math.cos((a[1] * Math.PI) / 180))
 }
 
+export interface NearbyConnection {
+    station: MergedStation
+    distM: number
+}
+
+export interface LineInterchange {
+    station: MergedStation
+    others: RailLine[]
+}
+
 class RailLineManager {
     private lines = new Map<string, RailLine>()
+    private mergedCache = new Map<CountryCode, MergedStation[]>()
 
     constructor() {
         for (const [path, mod] of Object.entries(modules)) {
             const line = mod.default
             if (!line) continue
 
-            // path looks like './MY/KJL.ts', make sure the folder matches the line's country
             const folder = path.split('/')[1]
             if (folder !== line.country) {
                 console.warn(`[RailLineManager] ${path} declares country ${line.country}`)
@@ -88,7 +98,7 @@ class RailLineManager {
                     continue
                 }
                 if (hit.line.country !== country) continue
-                hit.stations.forEach((s) => claimed.add(s)) // both direction platforms
+                hit.stations.forEach((s) => claimed.add(s))
                 if (!members.some((m) => m.line.id === hit.line.id)) {
                     members.push({ line: hit.line, station: hit.stations[0] })
                 }
@@ -134,6 +144,41 @@ class RailLineManager {
         }
 
         return [...manual, ...clusters]
+    }
+
+    private merged(country: CountryCode) {
+        if (!this.mergedCache.has(country)) this.mergedCache.set(country, this.getMergedStations(country))
+        return this.mergedCache.get(country)!
+    }
+
+    /** Other stations within walking distance that offer a line this station doesn't */
+    getNearbyConnections(st: MergedStation, maxM = 350): NearbyConnection[] {
+        const country = st.members[0]?.line.country
+        if (!country) return []
+        const mine = new Set(st.members.map((m) => m.line.id))
+        const myStations = new Set(st.members.map((m) => m.station))
+
+        return this.merged(country)
+            .filter((o) => !o.members.some((m) => myStations.has(m.station)))
+            .filter((o) => o.members.some((m) => !mine.has(m.line.id)))
+            .map((o) => ({ station: o, distM: distM(st.coordinates, o.coordinates) }))
+            .filter((c) => c.distM <= maxM)
+            .sort((a, b) => a.distM - b.distM)
+            .slice(0, 6)
+    }
+
+    /** Every interchange along one line, in the order the line stores its stations */
+    getLineInterchanges(line: RailLine): LineInterchange[] {
+        const out: { order: number; item: LineInterchange }[] = []
+        for (const st of this.merged(line.country)) {
+            const mine = st.members.find((m) => m.line.id === line.id)
+            if (!mine || st.members.length < 2) continue
+            out.push({
+                order: line.stations.indexOf(mine.station),
+                item: { station: st, others: st.members.filter((m) => m.line.id !== line.id).map((m) => m.line) },
+            })
+        }
+        return out.sort((a, b) => a.order - b.order).map((o) => o.item)
     }
 
     /** Line as GeoJSON, ready for a MapLibre source */

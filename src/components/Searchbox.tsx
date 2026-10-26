@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Mode, Place } from '../navigation/routing'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface Result extends Place {
     detail: string
@@ -155,10 +156,17 @@ export default function Searchbox({
     onSwap: () => void
     getBias?: () => [number, number] | undefined
 }) {
+    const mobile = useIsMobile()
+
+    // phones: a full-width bar across the top; desktop: a floating card
+    const frame: React.CSSProperties = mobile
+        ? { top: 0, left: 0, right: 0, borderRadius: '0 0 16px 16px', padding: 'calc(10px + env(safe-area-inset-top, 0px)) 12px 12px' }
+        : { top: 12, left: 12, width: 340, borderRadius: 12, padding: 10 }
+
     return (
-        <div style={{ position: 'fixed', top: 12, left: 12, zIndex: 3, width: 340, padding: 10, background: '#fff', borderRadius: 12, boxShadow: '0 2px 10px rgba(0,0,0,.25)', fontFamily: 'system-ui, sans-serif' }}>
+        <div style={{ position: 'fixed', zIndex: 3, boxSizing: 'border-box', background: '#fff', boxShadow: '0 2px 10px rgba(0,0,0,.25)', fontFamily: 'system-ui, sans-serif', ...frame }}>
             <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                     <PlaceInput
                         value={origin}
                         placeholder="Starting point"
@@ -168,7 +176,7 @@ export default function Searchbox({
                         onClear={() => onOrigin(null)}
                         getBias={getBias}
                         action={
-                            <button onClick={onUseMyLocation} title="Use my location" aria-label="Use my location" style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer' }}>
+                            <button onClick={onUseMyLocation} title="Use my location" aria-label="Use my location" style={{ border: 0, background: 'none', fontSize: 15, cursor: 'pointer', color: '#444' }}>
                                 📍
                             </button>
                         }
@@ -182,7 +190,12 @@ export default function Searchbox({
                         getBias={getBias}
                     />
                 </div>
-                <button onClick={onSwap} title="Swap" aria-label="Swap start and destination" style={{ border: '1px solid #ddd', background: '#fff', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', fontSize: 15 }}>
+                <button
+                    onClick={onSwap}
+                    title="Swap"
+                    aria-label="Swap start and destination"
+                    style={{ border: '1px solid #ddd', background: '#fff', color: '#444', borderRadius: 8, width: 34, height: 34, cursor: 'pointer', fontSize: 16, flexShrink: 0 }}
+                >
                     ⇅
                 </button>
             </div>
@@ -193,13 +206,13 @@ export default function Searchbox({
                         key={m.id}
                         onClick={() => onMode(m.id)}
                         style={{
-                            flex: 1, padding: '7px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
+                            flex: 1, padding: '7px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
                             border: `1px solid ${mode === m.id ? '#2b7de9' : '#ddd'}`,
                             background: mode === m.id ? '#eaf2fe' : '#fff',
                             color: mode === m.id ? '#1d5fc0' : '#444',
                         }}
                     >
-                        {m.icon} {m.label}
+                        {m.icon} {mobile ? '' : m.label}
                     </button>
                 ))}
             </div>

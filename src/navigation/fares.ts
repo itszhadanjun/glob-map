@@ -73,7 +73,7 @@ const TW: RailRate = { currency: 'NT$', base: 16, perKm: 2.5, min: 20, max: 65 }
 const RAIL: Record<string, RailRate> = {
     'Rapid Rail': { currency: 'RM', base: 0.8, perKm: 0.25, min: 1.2, max: 6.5 },
     'Rapid Bus': { currency: 'RM', base: 1, perKm: 0, min: 1, max: 1 },
-    'KTM Komuter': { currency: 'RM', base: 1, perKm: 0.12, min: 1, max: 10 },
+    'KTMB': { currency: 'RM', base: 1, perKm: 0.12, min: 1, max: 10 },
     SMRT: SG,
     'SBS Transit': SG,
     'Taipei Metro': TW,

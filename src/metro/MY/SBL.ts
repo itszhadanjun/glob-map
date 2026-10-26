@@ -8,7 +8,7 @@ const SBL: RailLine = {
   name: "KTM Seremban Line",
   country: 'MY',
   type: 'Commuter',
-  operator: "KTM Komuter",
+  operator: "KTMB",
   color: '#121bc1',
   stations: [
   {

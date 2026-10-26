@@ -8,7 +8,7 @@ const PKL: RailLine = {
   name: "KTM Port Klang Line",
   country: 'MY',
   type: 'Commuter',
-  operator: "KTM Komuter",
+  operator: "KTMB",
   color: '#D4145A',
   stations: [
   {

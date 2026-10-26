@@ -1,15 +1,28 @@
 import GtfsRealtimeBindings from 'gtfs-realtime-bindings'
 import type { RailLine, Station } from './types'
+import { SG_FREQ } from './frequencies'
 
-export type FeedId = 'rapid-rail-kl' | 'ktmb'
+export type FeedId = string
+export type VehicleFeed = 'rapid-rail-kl' | 'ktmb'
+
+// Taiwan line code -> timetable feed written by scripts/fetchTimetableTW.mjs
+const TW_FEED: Record<string, FeedId> = {
+    R: 'tw-trtc', BL: 'tw-trtc', G: 'tw-trtc', O: 'tw-trtc', BR: 'tw-trtc',
+    Y: 'tw-ntmc', V: 'tw-ntdlrt', K: 'tw-ntalrt', A: 'tw-tymc',
+}
 
 /** Which timetable feed serves a line. Undefined means no data source yet. */
 export function feedOf(line: RailLine): FeedId | undefined {
-    if (line.country !== 'MY') return undefined
-    if (line.operator.includes('KTM')) return 'ktmb'
-    if (line.operator.includes('Rapid')) return 'rapid-rail-kl'
+    if (line.country === 'MY') {
+        if (line.operator.includes('KTM')) return 'ktmb'
+        if (line.operator.includes('Rapid Rail')) return 'rapid-rail-kl'
+        return undefined
+    }
+    if (line.country === 'TW') return TW_FEED[line.code]
     return undefined
 }
+
+const hasFrequencyModel = (line: RailLine) => line.country === 'SG' && !!SG_FREQ[line.code]
 
 interface StopInfo { id: string; name: string; lat: number; lon: number }
 interface Calendar { id: string; days: boolean[]; start: string; end: string }
@@ -23,6 +36,7 @@ export interface Departure {
     time: string
     inMin: number
     abs: number
+    estimated?: boolean
 }
 
 const indexCache = new Map<FeedId, Index>()
@@ -52,7 +66,7 @@ const distM = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     return Math.hypot((lat2 - lat1) * k, (lon2 - lon1) * k * Math.cos((lat1 * Math.PI) / 180))
 }
 
-/** Nearest GTFS stop within 250 m, plus same-named stops nearby (other platforms) */
+/** Nearest timetable stop within 250 m, plus same-named stops nearby (other platforms and lines) */
 export async function findStops(feed: FeedId, lng: number, lat: number) {
     const { stops } = await getIndex(feed)
     let best: StopInfo | undefined
@@ -66,8 +80,8 @@ export async function findStops(feed: FeedId, lng: number, lat: number) {
     return stops.filter((s) => s.id === b.id || (s.name === b.name && distM(b.lat, b.lon, s.lat, s.lon) < 400))
 }
 
-// a Date whose local fields read as Malaysia time (UTC+8)
-const malaysiaNow = () => new Date(Date.now() + (8 * 60 + new Date().getTimezoneOffset()) * 60000)
+// Malaysia, Singapore and Taiwan are all UTC+8
+const asiaNow = () => new Date(Date.now() + (8 * 60 + new Date().getTimezoneOffset()) * 60000)
 const ymdOf = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
 
 function activeServices(idx: Index, d: Date) {
@@ -87,12 +101,12 @@ function activeServices(idx: Index, d: Date) {
 const hhmm = (sec: number) =>
     `${String(Math.floor(sec / 3600) % 24).padStart(2, '0')}:${String(Math.floor((sec % 3600) / 60)).padStart(2, '0')}`
 
-/** Next scheduled departures from one stop (Malaysia time) */
+/** Next scheduled departures from one stop */
 export async function nextDepartures(feed: FeedId, stopId: string, count = 8): Promise<Departure[]> {
     const idx = await getIndex(feed)
     const list = await getStopTimes(feed, stopId)
 
-    const now = malaysiaNow()
+    const now = asiaNow()
     const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
     const today = activeServices(idx, now)
     const yesterday = activeServices(idx, new Date(now.getTime() - 86400000))
@@ -102,10 +116,79 @@ export async function nextDepartures(feed: FeedId, stopId: string, count = 8): P
         const push = (abs: number) =>
             out.push({ route: d.r, headsign: d.h, time: hhmm(abs), inMin: Math.max(0, Math.round((abs - nowSec) / 60)), abs })
         if (today.has(d.s) && d.t >= nowSec) push(d.t)
-        // trips after midnight that belong to yesterday's service day (times past 24:00)
         if (d.t >= 86400 && yesterday.has(d.s) && d.t - 86400 >= nowSec) push(d.t - 86400)
     }
     return out.sort((a, b) => a.abs - b.abs).slice(0, count)
+}
+
+// ---------- estimated departures from first/last train and headway (Singapore) ----------
+
+const toSec = (t: string) => {
+    const [h, m] = t.split(':').map(Number)
+    return h * 3600 + m * 60
+}
+
+// the two stations farthest apart are taken as the line's termini
+function terminals(line: RailLine): [Station, Station] | null {
+    const s = line.stations
+    if (s.length < 2) return null
+    let best: [Station, Station] = [s[0], s[s.length - 1]]
+    let bd = 0
+    for (let i = 0; i < s.length; i++) {
+        for (let j = i + 1; j < s.length; j++) {
+            const d = distM(s[i].coordinates[1], s[i].coordinates[0], s[j].coordinates[1], s[j].coordinates[0])
+            if (d > bd) { bd = d; best = [s[i], s[j]] }
+        }
+    }
+    return best
+}
+
+function frequencyDepartures(line: RailLine, station: Station, count: number): Departure[] {
+    const f = SG_FREQ[line.code]
+    const ends = terminals(line)
+    if (!f || !ends) return []
+
+    const now = asiaNow()
+    const nowSec = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()
+    const weekend = now.getDay() === 0 || now.getDay() === 6
+
+    const first = toSec(f.first)
+    let last = toSec(f.last)
+    if (last <= first) last += 86400
+
+    const gap = (sec: number) => {
+        const h = (sec / 3600) % 24
+        const peak = !weekend && ((h >= 7 && h < 9.5) || (h >= 17 && h < 20))
+        return (peak ? f.peak : f.off) * 60
+    }
+
+    const times: number[] = []
+    for (let t = first; t <= last; t += gap(t)) times.push(t)
+
+    const slots: number[] = []
+    for (const t of times) {
+        if (t >= nowSec) slots.push(t)
+        if (t >= 86400 && t - 86400 >= nowSec) slots.push(t - 86400) // last night's trains after midnight
+    }
+    slots.sort((a, b) => a - b)
+
+    const [lng, lat] = station.coordinates
+    const dests = ends.filter((e) => distM(lat, lng, e.coordinates[1], e.coordinates[0]) > 150) // no train heads to the stop it is at
+
+    const out: Departure[] = []
+    for (const abs of slots.slice(0, count)) {
+        for (const d of dests) {
+            out.push({
+                route: line.code,
+                headsign: `To ${d.name}`,
+                time: hhmm(abs),
+                inMin: Math.max(0, Math.round((abs - nowSec) / 60)),
+                abs,
+                estimated: true,
+            })
+        }
+    }
+    return out
 }
 
 /**
@@ -117,26 +200,32 @@ export async function departuresForMembers(
     count = 8,
 ): Promise<Departure[] | null> {
     const byFeed = new Map<FeedId, Station[]>()
-    for (const m of members) {
-        const feed = feedOf(m.line)
-        if (!feed || !m.station) continue
-        byFeed.set(feed, [...(byFeed.get(feed) ?? []), m.station])
-    }
-    if (!byFeed.size) return null
+    const out: Departure[] = []
+    let any = false
 
-    const all: Departure[] = []
+    for (const m of members) {
+        if (!m.station) continue
+        const feed = feedOf(m.line)
+        if (feed) byFeed.set(feed, [...(byFeed.get(feed) ?? []), m.station])
+        else if (hasFrequencyModel(m.line)) {
+            out.push(...frequencyDepartures(m.line, m.station, count))
+            any = true
+        }
+    }
+    if (!byFeed.size && !any) return null
+
     for (const [feed, stations] of byFeed) {
         const ids = new Set<string>()
         for (const s of stations) {
             for (const stop of await findStops(feed, s.coordinates[0], s.coordinates[1])) ids.add(stop.id)
         }
-        for (const id of ids) all.push(...(await nextDepartures(feed, id, count)))
+        for (const id of ids) out.push(...(await nextDepartures(feed, id, count)))
     }
-    return all.sort((a, b) => a.abs - b.abs).slice(0, count)
+    return out.sort((a, b) => a.abs - b.abs).slice(0, count)
 }
 
 /** Live vehicle positions as GeoJSON */
-export async function fetchVehicles(feed: FeedId) {
+export async function fetchVehicles(feed: VehicleFeed) {
     const url =
         feed === 'ktmb'
             ? 'https://api.data.gov.my/gtfs-realtime/vehicle-position/ktmb'
